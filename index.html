@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBM Plex Glyph Viewer</title>
+    
+    <!-- IBM Plex Font -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Carbon Design System Styles -->
+    <link rel="stylesheet" href="https://unpkg.com/carbon-components@10.58.0/css/carbon-components.min.css">
+    
+    <style>
+        :root {
+            --cds-ui-background: #ffffff;
+            --cds-ui-01: #f4f4f4;
+            --cds-ui-02: #ffffff;
+            --cds-text-01: #161616;
+            --cds-text-02: #525252;
+            --cds-interactive-01: #0f62fe;
+            --cds-interactive-02: #393939;
+            --cds-hover-ui: #e5e5e5;
+            --cds-active-ui: #c6c6c6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: var(--cds-ui-background);
+            color: var(--cds-text-01);
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--cds-ui-01);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--cds-text-02);
+            font-size: 0.875rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .bx--select {
+            min-width: 200px;
+        }
+
+        .font-selector, .range-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--cds-text-02);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+        }
+
+        select {
+            font-family: 'IBM Plex Sans', sans-serif;
+            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            border: none;
+            border-bottom: 1px solid var(--cds-text-01);
+            background-color: var(--cds-ui-01);
+            color: var(--cds-text-01);
+            font-size: 0.875rem;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23161616' d='M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+        }
+
+        select:hover {
+            background-color: var(--cds-hover-ui);
+        }
+
+        select:focus {
+            outline: 2px solid var(--cds-interactive-01);
+            outline-offset: 2px;
+        }
+
+        .glyph-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .glyph-card {
+            background-color: var(--cds-ui-01);
+            border: 1px solid transparent;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            position: relative;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .glyph-card:hover {
+            background-color: var(--cds-hover-ui);
+            border-color: var(--cds-interactive-01);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .glyph-card:active {
+            background-color: var(--cds-active-ui);
+            transform: translateY(0);
+        }
+
+        .glyph-char {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            user-select: none;
+        }
+
+        .glyph-code {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.625rem;
+            color: var(--cds-text-02);
+            user-select: none;
+        }
+
+        .copied-notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background-color: var(--cds-interactive-02);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0;
+            font-size: 0.875rem;
+            opacity: 0;
+            transform: translateY(1rem);
+            transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+            pointer-events: none;
+            z-index: 1000;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .copied-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stats {
+            font-size: 0.875rem;
+            color: var(--cds-text-02);
+            margin-bottom: 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .glyph-grid {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                gap: 0.25rem;
+            }
+
+            .glyph-card {
+                padding: 0.5rem;
+                min-height: 80px;
+            }
+
+            .glyph-char {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>IBM Plex Glyph Viewer</h1>
+        <p class="subtitle">Click any glyph to copy it to clipboard</p>
+    </div>
+
+    <div class="controls">
+        <div class="font-selector">
+            <label for="font-family">Font Family</label>
+            <select id="font-family">
+                <option value="IBM Plex Sans">IBM Plex Sans</option>
+                <option value="IBM Plex Mono">IBM Plex Mono</option>
+            </select>
+        </div>
+
+        <div class="range-selector">
+            <label for="unicode-range">Unicode Range</label>
+            <select id="unicode-range">
+                <option value="basic-latin">Basic Latin (0020-007F)</option>
+                <option value="latin-1">Latin-1 Supplement (00A0-00FF)</option>
+                <option value="latin-extended-a">Latin Extended-A (0100-017F)</option>
+                <option value="latin-extended-b">Latin Extended-B (0180-024F)</option>
+                <option value="greek">Greek and Coptic (0370-03FF)</option>
+                <option value="cyrillic">Cyrillic (0400-04FF)</option>
+                <option value="symbols">General Punctuation (2000-206F)</option>
+                <option value="currency">Currency Symbols (20A0-20CF)</option>
+                <option value="arrows" selected>Arrows (2190-21FF)</option>
+                <option value="math">Mathematical Operators (2200-22FF)</option>
+                <option value="box">Box Drawing (2500-257F)</option>
+                <option value="geometric">Geometric Shapes (25A0-25FF)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="glyph-grid" id="glyph-grid"></div>
+
+    <div class="copied-notification" id="notification">
+        <span id="notification-text"></span>
+    </div>
+
+    <script>
+        const unicodeRanges = {
+            'basic-latin': { start: 0x0020, end: 0x007F, name: 'Basic Latin' },
+            'latin-1': { start: 0x00A0, end: 0x00FF, name: 'Latin-1 Supplement' },
+            'latin-extended-a': { start: 0x0100, end: 0x017F, name: 'Latin Extended-A' },
+            'latin-extended-b': { start: 0x0180, end: 0x024F, name: 'Latin Extended-B' },
+            'greek': { start: 0x0370, end: 0x03FF, name: 'Greek and Coptic' },
+            'cyrillic': { start: 0x0400, end: 0x04FF, name: 'Cyrillic' },
+            'symbols': { start: 0x2000, end: 0x206F, name: 'General Punctuation' },
+            'currency': { start: 0x20A0, end: 0x20CF, name: 'Currency Symbols' },
+            'arrows': { start: 0x2190, end: 0x21FF, name: 'Arrows' },
+            'math': { start: 0x2200, end: 0x22FF, name: 'Mathematical Operators' },
+            'box': { start: 0x2500, end: 0x257F, name: 'Box Drawing' },
+            'geometric': { start: 0x25A0, end: 0x25FF, name: 'Geometric Shapes' }
+        };
+
+        let currentFont = 'IBM Plex Sans';
+        let currentRange = 'arrows';
+
+        function renderGlyphs() {
+            const grid = document.getElementById('glyph-grid');
+            const range = unicodeRanges[currentRange];
+            grid.innerHTML = '';
+
+            let count = 0;
+            for (let i = range.start; i <= range.end; i++) {
+                const char = String.fromCodePoint(i);
+                
+                // Skip control characters and non-printable characters
+                if (i < 0x20 || (i >= 0x7F && i < 0xA0)) continue;
+
+                const card = document.createElement('div');
+                card.className = 'glyph-card';
+                card.innerHTML = `
+                    <div class="glyph-char" style="font-family: '${currentFont}'">${char}</div>
+                    <div class="glyph-code">U+${i.toString(16).toUpperCase().padStart(4, '0')}</div>
+                `;
+                
+                card.addEventListener('click', () => copyToClipboard(char, i));
+                grid.appendChild(card);
+                count++;
+            }
+
+            document.getElementById('stats').textContent = 
+                `Showing ${count} glyphs from ${range.name}`;
+        }
+
+        function copyToClipboard(char, codePoint) {
+            navigator.clipboard.writeText(char).then(() => {
+                showNotification(`Copied: ${char} (U+${codePoint.toString(16).toUpperCase().padStart(4, '0')})`);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy to clipboard');
+            });
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            
+            notificationText.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        document.getElementById('font-family').addEventListener('change', (e) => {
+            currentFont = e.target.value;
+            renderGlyphs();
+        });
+
+        document.getElementById('unicode-range').addEventListener('change', (e) => {
+            currentRange = e.target.value;
+            renderGlyphs();
+        });
+
+        // Initial render
+        renderGlyphs();
+    </script>
+</body>
+</html>

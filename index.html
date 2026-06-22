@@ -264,32 +264,60 @@
         let currentFont = 'IBM Plex Sans';
         let currentRange = 'arrows';
 
+        // Check if a glyph exists in IBM Plex by comparing width with fallback
+        function hasPlexGlyph(char, fontFamily) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const size = 100;
+            
+            // Measure with IBM Plex
+            ctx.font = `${size}px "${fontFamily}"`;
+            const plexWidth = ctx.measureText(char).width;
+            
+            // Measure with a very different fallback
+            ctx.font = `${size}px serif`;
+            const serifWidth = ctx.measureText(char).width;
+            
+            // If widths differ significantly, Plex has the glyph
+            return Math.abs(plexWidth - serifWidth) > 1;
+        }
+
         function renderGlyphs() {
             const grid = document.getElementById('glyph-grid');
             const range = unicodeRanges[currentRange];
             grid.innerHTML = '';
 
-            let count = 0;
-            for (let i = range.start; i <= range.end; i++) {
-                const char = String.fromCodePoint(i);
+            // Wait for fonts to load
+            document.fonts.ready.then(() => {
+                let count = 0;
+                let totalInRange = 0;
                 
-                // Skip control characters and non-printable characters
-                if (i < 0x20 || (i >= 0x7F && i < 0xA0)) continue;
+                for (let i = range.start; i <= range.end; i++) {
+                    const char = String.fromCodePoint(i);
+                    
+                    // Skip control characters and non-printable characters
+                    if (i < 0x20 || (i >= 0x7F && i < 0xA0)) continue;
+                    
+                    totalInRange++;
+                    
+                    // Only show glyphs that exist in IBM Plex
+                    if (!hasPlexGlyph(char, currentFont)) continue;
 
-                const card = document.createElement('div');
-                card.className = 'glyph-card';
-                card.innerHTML = `
-                    <div class="glyph-char" style="font-family: '${currentFont}'">${char}</div>
-                    <div class="glyph-code">U+${i.toString(16).toUpperCase().padStart(4, '0')}</div>
-                `;
-                
-                card.addEventListener('click', () => copyToClipboard(char, i));
-                grid.appendChild(card);
-                count++;
-            }
+                    const card = document.createElement('div');
+                    card.className = 'glyph-card';
+                    card.innerHTML = `
+                        <div class="glyph-char" style="font-family: '${currentFont}'">${char}</div>
+                        <div class="glyph-code">U+${i.toString(16).toUpperCase().padStart(4, '0')}</div>
+                    `;
+                    
+                    card.addEventListener('click', () => copyToClipboard(char, i));
+                    grid.appendChild(card);
+                    count++;
+                }
 
-            document.getElementById('stats').textContent = 
-                `Showing ${count} glyphs from ${range.name}`;
+                document.getElementById('stats').textContent =
+                    `Showing ${count} IBM Plex glyphs from ${range.name} (${count} of ${totalInRange} in range)`;
+            });
         }
 
         function copyToClipboard(char, codePoint) {
